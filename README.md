@@ -20,7 +20,7 @@
 #### 1. 克隆项目
 
 ```bash
-git clone https://github.com/<your-user>/rss-notify.git
+git clone https://github.com/zcoal/rss-notify.git
 cd rss-notify
 ```
 
@@ -48,8 +48,6 @@ import secrets
 print(secrets.token_urlsafe(48))
 PY
 ```
-
-> 注意：`ADMIN_USER` / `ADMIN_PASS` 只用于首次创建管理员账号。如果 `./data/rss_notify.db` 已存在，账号密码以数据库内保存的为准，可在 Web 页面“设置”里修改。
 
 #### 3. 启动
 
@@ -83,7 +81,7 @@ curl http://127.0.0.1:${APP_PORT:-8000}/api/health
 ```yaml
 services:
   rss-notify:
-    image: ghcr.io/<你的GitHub用户名或组织名>/rss-notify:latest
+    image: ghcr.io/zcoal/rss-notify:latest
     container_name: rss-notify
     restart: unless-stopped
     ports:
