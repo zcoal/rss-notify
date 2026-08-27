@@ -1,0 +1,21 @@
+services:
+  rss-notify:
+    build: .
+    image: rss-notify:latest
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      ADMIN_USER: ${ADMIN_USER:-admin}
+      ADMIN_PASS: ${ADMIN_PASS:-change-this-password}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-change-this-to-a-long-random-string}
+      FEED_TIMEOUT: ${FEED_TIMEOUT:-30}
+      TZ: ${TZ:-Asia/Shanghai}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3).read()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

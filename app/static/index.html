@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RSS 关键词监控</title>
+<link rel="icon" type="image/svg+xml" href="/static/logo.svg?v=20260807b">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px;display:flex;height:100vh;overflow:hidden}
+#app{width:100vw;height:100vh;min-width:0;display:flex}
+
+/* ── Login ──────────────────────────────────────────────────────────────── */
+.login-page{position:fixed;inset:0;background:#f0f2f5;display:flex;align-items:center;justify-content:center;z-index:999}
+.login-box{background:#fff;padding:40px;border-radius:14px;box-shadow:0 8px 30px rgba(0,0,0,.08);width:360px}
+.login-box h2{text-align:center;margin-bottom:28px;color:#1a1a2e;font-size:22px;font-weight:700}
+.login-box .logo{text-align:center;margin-bottom:20px}
+.login-box .logo img{width:48px;height:48px}
+.login-box input{width:100%;padding:11px 14px;margin-bottom:14px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;transition:border .2s}
+.login-box input:focus{outline:none;border-color:#ff6600}
+.login-box button{width:100%;padding:11px;background:#ff6600;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:600;transition:background .2s}
+.login-box button:hover{background:#e55b00}
+.login-err{color:#e74c3c;text-align:center;font-size:13px;margin-bottom:10px;min-height:20px}
+
+/* ── Sidebar ────────────────────────────────────────────────────────────── */
+.sidebar{width:220px;background:#1a1a2e;color:#fff;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar .logo-area{padding:20px 18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar .logo-area img{width:28px;height:28px}
+.sidebar .logo-area span{font-size:15px;font-weight:700;letter-spacing:.3px}
+.sidebar nav{flex:1;padding:8px 0}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:11px 20px;color:rgba(255,255,255,.6);text-decoration:none;font-size:14px;transition:all .15s;cursor:pointer;border-left:3px solid transparent}
+.sidebar nav a:hover{color:#fff;background:rgba(255,255,255,.05)}
+.sidebar nav a.active{color:#ff6600;background:rgba(255,102,0,.08);border-left-color:#ff6600;font-weight:600}
+.sidebar nav a svg{width:18px;height:18px;flex-shrink:0}
+
+/* ── Sidebar bottom ─────────────────────────────────────────────────────── */
+.sidebar .sidebar-bottom{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08)}
+.sidebar .sidebar-bottom .user-row{display:flex;align-items:center;gap:10px}
+.sidebar .sidebar-bottom .avatar{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.12);display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0}
+.sidebar .sidebar-bottom .user-meta{min-width:0;flex:1}
+.sidebar .sidebar-bottom .user-name{font-size:13px;color:rgba(255,255,255,.85);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar .sidebar-bottom .user-hint{font-size:11px;color:rgba(255,255,255,.4)}
+.sidebar .sidebar-bottom .logout-btn{display:inline-flex;align-items:center;justify-content:center;color:rgba(255,255,255,.65);font-size:12px;cursor:pointer;padding:5px 10px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);transition:all .15s;text-decoration:none;white-space:nowrap;flex-shrink:0}
+.sidebar .sidebar-bottom .logout-btn:hover{color:#ff6600;background:rgba(255,255,255,.1);border-color:rgba(255,102,0,.25)}
+
+/* ── Main ───────────────────────────────────────────────────────────────── */
+.main{flex:1;overflow-y:auto;overflow-x:hidden;padding:24px 28px;min-height:0;min-width:0}
+.main h2{font-size:18px;font-weight:700;margin-bottom:18px;color:#1a1a2e}
+
+/* ── Stats ──────────────────────────────────────────────────────────────── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px}
+.stat-item{background:#fff;padding:14px;border-radius:10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.stat-item .num{font-size:28px;font-weight:700;color:#ff6600}
+.stat-item .label{font-size:12px;color:#999;margin-top:2px}
+
+/* ── Card ───────────────────────────────────────────────────────────────── */
+.card{background:#fff;border-radius:10px;padding:18px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn{padding:7px 16px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.btn-primary{background:#ff6600;color:#fff}.btn-primary:hover{background:#e55b00}
+.btn-success{background:#00b894;color:#fff}.btn-success:hover{background:#009874}
+.btn-danger{background:#e74c3c;color:#fff}.btn-danger:hover{background:#c0392b}
+.btn-ghost{background:#f0f0f0;color:#333}.btn-ghost:hover{background:#e0e0e0}
+.btn-sm{padding:4px 10px;font-size:12px}
+
+/* ── Table ──────────────────────────────────────────────────────────────── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+th{text-align:left;padding:10px 8px;color:#666;font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid #f0f0f0;background:#fafafa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td{padding:10px 8px;border-bottom:1px solid #f5f5f5;vertical-align:middle;overflow:hidden;text-overflow:ellipsis}
+tr:hover td{background:#fafafa}
+a{color:#ff6600;text-decoration:none;cursor:pointer}
+a:hover{text-decoration:underline}
+.muted{color:#999;font-size:12px}
+
+/* ── Full-width pages ───────────────────────────────────────────────────── */
+#page-feeds,#page-items,#page-settings{width:100% !important}
+#page-feeds .card,#page-items .card,#page-settings .card{width:100%;max-width:100%;display:block !important}
+#page-settings .settings-section{width:100%;display:block !important}
+#page-settings .settings-row{width:100%;display:flex !important;flex-wrap:wrap;gap:10px}
+#page-settings .settings-row label{flex:0 0 auto;min-width:120px}
+#page-settings .settings-row input[type=number]{flex:1 1 auto;min-width:120px}
+#page-settings .settings-row button{flex:0 0 auto}
+
+/* ── Feed table columns ────────────────────────────────────────────────── */
+#feed-tbody{width:100%}
+#page-feeds table{table-layout:fixed}
+#page-feeds col:nth-child(1){width:20%}   /* 名称 */
+#page-feeds col:nth-child(2){width:26%}   /* 关键词规则 */
+#page-feeds col:nth-child(3){width:10%}   /* 状态 */
+#page-feeds col:nth-child(4){width:16%}   /* 上次轮询 */
+#page-feeds col:nth-child(5){width:28%}   /* 操作 */
+
+/* ── Item table columns ────────────────────────────────────────────────── */
+#page-items table{table-layout:fixed}
+/* time src title summary match push action */
+#page-items col:nth-child(1){width:9%}    /* 时间 */
+#page-items col:nth-child(2){width:11%}   /* 来源 */
+#page-items col:nth-child(3){width:22%}   /* 标题 */
+#page-items col:nth-child(4){width:24%}   /* 摘要 */
+#page-items col:nth-child(5){width:16%}   /* 匹配 */
+#page-items col:nth-child(6){width:7%}    /* 推送 */
+#page-items col:nth-child(7){width:11%}   /* 操作 */
+
+/* ── Status dot ─────────────────────────────────────────────────────────── */
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.dot-green{background:#00b894}
+.dot-red{background:#e74c3c}
+.kw-tags{display:flex;gap:4px;flex-wrap:wrap;align-items:center;justify-content:flex-start;min-width:0}
+.kw-tag{display:inline-flex;align-items:center;max-width:100%;padding:2px 7px;border-radius:999px;background:#fff3e8;color:#d35400;border:1px solid rgba(255,102,0,.18);font-size:11px;line-height:1.4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kw-tag-muted{background:#f4f4f4;color:#999;border-color:#eee}
+
+/* ── Modal ──────────────────────────────────────────────────────────────── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;justify-content:center;align-items:center}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:14px;padding:28px;max-width:620px;width:92%;max-height:85vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{margin-bottom:18px;font-size:17px;font-weight:700}
+.modal .close-btn{float:right;cursor:pointer;color:#999;font-size:24px;background:none;border:none;line-height:1}
+.modal .close-btn:hover{color:#333}
+.modal pre{background:#f8f8f8;padding:14px;border-radius:8px;font-size:12px;max-height:400px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+
+/* ── Form ───────────────────────────────────────────────────────────────── */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;color:#555;margin-bottom:5px;font-weight:500}
+.form-group input,.form-group textarea,.form-group select{width:100%;padding:9px 12px;border:1.5px solid #e0e0e0;border-radius:7px;font-size:13px;font-family:inherit;transition:border .2s}
+.form-group input:focus,.form-group textarea:focus{outline:none;border-color:#ff6600}
+.form-group textarea{min-height:72px;resize:vertical;font-family:monospace;font-size:12px}
+.form-row{display:flex;gap:12px}
+.form-row .form-group{flex:1}
+
+/* ── Filter bar ─────────────────────────────────────────────────────────── */
+.filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-bar input,.filter-bar select{padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:13px}
+.filter-bar input{flex:1;min-width:140px}
+.filter-bar select{min-width:100px}
+
+/* ── Text ellipsis ──────────────────────────────────────────────────────── */
+.text-ellipsis{max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.text-ellipsis-sm{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#888}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+.empty{text-align:center;padding:40px;color:#bbb}
+
+/* ── Pagination ─────────────────────────────────────────────────────────── */
+.pagination{display:flex;gap:4px;justify-content:center;margin-top:12px}
+.pagination button{padding:5px 12px;border:1px solid #e0e0e0;background:#fff;border-radius:5px;cursor:pointer;font-size:12px}
+.pagination button.active{background:#ff6600;color:#fff;border-color:#ff6600}
+
+/* ── Settings sections ──────────────────────────────────────────────────── */
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(420px,100%),1fr));gap:16px;align-items:stretch;width:100%;max-width:none}
+#page-settings .card{margin-bottom:0;min-width:0;height:100%}
+.settings-section{margin-bottom:0;width:100%;height:100%}
+.settings-section h4{font-size:14px;font-weight:600;color:#333;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #f0f0f0}
+.settings-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
+.settings-row{display:flex;align-items:center;gap:12px;margin-bottom:10px;width:100%;flex-wrap:wrap}
+.settings-row label{min-width:120px;font-size:13px;color:#555}
+.settings-row input{flex:1 1 220px;min-width:180px;padding:7px 10px;border:1.5px solid #e0e0e0;border-radius:6px;font-size:13px}
+.settings-row input:focus{outline:none;border-color:#ff6600}
+#page-settings .form-group{width:100%;max-width:none}
+#page-settings .form-group input{width:100%;max-width:none}
+@media (min-width:1440px){.settings-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:980px) and (max-width:1439px){.settings-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:720px){#app{width:100vw}.settings-grid{grid-template-columns:1fr}.settings-row label{width:100%}.settings-row input{flex-basis:100%}}
+</style>
+</head>
+<body>
+
+<!-- ── Login Page ────────────────────────────────────────────────────────── -->
+<div id="login-page" class="login-page">
+  <div class="login-box">
+    <div class="logo">
+      <img src="/static/logo.svg?v=20260807b" alt="logo">
+    </div>
+    <h2>RSS 关键词监控</h2>
+    <div class="login-err" id="login-err"></div>
+    <form id="login-form">
+      <input id="login-user" placeholder="用户名" autofocus>
+      <input id="login-pass" type="password" placeholder="密码">
+      <button type="submit">登 录</button>
+    </form>
+  </div>
+</div>
+
+<!-- ── App Shell ─────────────────────────────────────────────────────────── -->
+<div id="app" style="display:none">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo-area">
+      <img src="/static/logo.svg?v=20260807b" alt="logo">
+      <span>RSS 监控</span>
+    </div>
+    <nav>
+      <a class="active" data-page="feeds" onclick="showPage('feeds')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+        订阅
+      </a>
+      <a data-page="items" onclick="showPage('items')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        消息
+      </a>
+      <a data-page="settings" onclick="showPage('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        设置
+      </a>
+    </nav>
+ <div class="sidebar-bottom">
+  <div class="user-row">
+   <div class="avatar">👤</div>
+   <div class="user-meta">
+    <div class="user-name" id="username-display"></div>
+    <div class="user-hint">在线</div>
+   </div>
+   <a class="logout-btn" onclick="doLogout()">退出</a>
+  </div>
+ </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+
+    <!-- ── Feeds Page ─────────────────────────────────────────────────── -->
+    <div id="page-feeds">
+      <h2>订阅管理</h2>
+      <div class="stat-grid" id="stats-grid"></div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <span style="font-weight:600;font-size:14px">订阅源列表</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="pollAll()">🔄 全部轮询</button>
+            <button class="btn btn-primary btn-sm" onclick="openAddFeed()">+ 添加订阅</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+ <table>
+ <colgroup><col style="width:20%"><col style="width:26%"><col style="width:10%"><col style="width:16%"><col style="width:28%"></colgroup>
+ <thead><tr><th style="white-space:nowrap">名称</th><th>关键词规则</th><th style="white-space:nowrap">状态</th><th style="white-space:nowrap">上次轮询</th><th style="white-space:nowrap">操作</th></tr></thead>
+            <tbody id="feed-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Items Page ─────────────────────────────────────────────────── -->
+    <div id="page-items" style="display:none">
+      <h2>消息记录</h2>
+      <div class="card">
+        <div class="filter-bar">
+          <input id="item-kw" placeholder="搜索关键词…">
+          <select id="item-filter">
+            <option value="all">全部</option>
+            <option value="matched">关键词命中</option>
+            <option value="notified">已推送</option>
+            <option value="unread">待推送</option>
+          </select>
+          <select id="item-feed-filter"><option value="">所有订阅源</option></select>
+          <button class="btn btn-primary btn-sm" onclick="loadItems()">搜索</button>
+        </div>
+ <div class="table-wrap">
+ <table>
+ <colgroup><col style="width:9%"><col style="width:11%"><col style="width:22%"><col style="width:24%"><col style="width:16%"><col style="width:7%"><col style="width:11%"></colgroup>
+ <thead><tr><th style="white-space:nowrap">时间</th><th style="white-space:nowrap">来源</th><th>标题</th><th>摘要</th><th style="white-space:nowrap">匹配</th><th style="white-space:nowrap">推送</th><th style="white-space:nowrap">操作</th></tr></thead>
+            <tbody id="item-tbody"></tbody>
+          </table>
+        </div>
+        <div id="item-pagination" class="pagination"></div>
+      </div>
+    </div>
+
+    <!-- ── Settings Page ──────────────────────────────────────────────── -->
+    <div id="page-settings" style="display:none">
+      <h2>设置</h2>
+      <div class="settings-grid">
+        <!-- Profile -->
+        <div class="card">
+          <div class="settings-section">
+            <h4>👤 修改资料</h4>
+            <div class="form-group"><label>用户名</label><input id="profile-username" placeholder="请输入登录用户名"></div>
+            <div class="form-group"><label>当前密码</label><input id="profile-current-password" type="password" placeholder="修改用户名或新密码时均需填写"></div>
+            <div class="form-group"><label>新密码</label><input id="profile-new-password" type="password" placeholder="不修改密码可留空"></div>
+            <div class="form-group"><label>确认新密码</label><input id="profile-confirm-password" type="password" placeholder="再次输入新密码"></div>
+            <div class="settings-actions">
+              <button class="btn btn-primary" onclick="saveProfile()">保存资料</button>
+              <span id="profile-msg" class="muted"></span>
+            </div>
+          </div>
+        </div>
+        <!-- Message limit -->
+        <div class="card">
+          <div class="settings-section">
+            <h4>📦 消息上限</h4>
+            <p class="muted" style="margin-bottom:12px">当消息总数超过上限时，系统自动按时间删除最早的消息。设为 0 表示不限制。</p>
+            <div class="settings-row">
+              <label>消息上限</label>
+              <input id="msg-limit" type="number" value="5000" min="0" step="100">
+              <button class="btn btn-primary btn-sm" onclick="saveSettings()">保存</button>
+              <button class="btn btn-ghost btn-sm" onclick="manualCleanup()">手动清理</button>
+            </div>
+            <span id="settings-msg" class="muted"></span>
+          </div>
+        </div>
+        <!-- Import / Export -->
+        <div class="card">
+          <div class="settings-section">
+            <h4>💾 导入 / 导出配置</h4>
+            <p class="muted" style="margin-bottom:12px">导出所有订阅源配置为 JSON 文件，或从 JSON 文件导入。</p>
+            <div class="settings-actions">
+              <button class="btn btn-ghost btn-sm" onclick="exportFeeds()">📤 导出配置</button>
+              <label class="btn btn-ghost btn-sm" style="cursor:pointer">📥 导入配置<input type="file" accept=".json" style="display:none" onchange="importFeeds(event)"></label>
+              <span id="import-msg" class="muted"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Feed Edit Modal ────────────────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-feed">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal('modal-feed')">&times;</button>
+    <h3 id="feed-form-title">添加订阅源</h3>
+    <input type="hidden" id="feed-edit-id">
+    <div class="form-row">
+      <div class="form-group"><label>名称</label><input id="f-name" placeholder="如: BBC Tech News"></div>
+      <div class="form-group"><label>轮询间隔（分钟）</label><input id="f-interval" type="number" value="60" min="1" step="1"></div>
+    </div>
+    <div class="form-group"><label>RSS / Atom URL *</label><input id="f-url" placeholder="https://example.com/feed.xml"></div>
+    <div class="form-group"><label>白名单关键词（每行一个，命中才推送；留空=全部推送）</label><textarea id="f-white" placeholder="关键词1&#10;关键词2"></textarea></div>
+    <div class="form-group"><label>黑名单关键词（每行一个，命中则跳过）</label><textarea id="f-black" placeholder="广告&#10;促销"></textarea></div>
+    <div class="form-group"><label>Apprise 通知 URL（每行一个）</label><textarea id="f-notify" placeholder="tgram://bot-token/chat-id&#10;gotify://host/token"></textarea></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-feed')">取消</button>
+      <button class="btn btn-primary" onclick="saveFeed()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Import Preview Modal ───────────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-import">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal('modal-import')">&times;</button>
+    <h3>导入预览</h3>
+    <p class="muted" id="import-preview-info"></p>
+    <pre id="import-preview-body" style="max-height:300px"></pre>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-ghost" onclick="closeModal('modal-import')">取消</button>
+      <button class="btn btn-primary" id="import-confirm-btn">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── State ─────────────────────────────────────────────────────────────── */
+let curPage = 'feeds';
+let itemPage = 1;
+let curItemId = null;
+let pendingImportData = null;
+
+/* ── API helper ────────────────────────────────────────────────────────── */
+async function api(path, method='GET', body=null) {
+  const opts = { method, headers: {'Content-Type':'application/json'}, credentials:'same-origin' };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  if (r.status === 401 && !path.includes('/login')) { showLogin(); return {error:'session expired'}; }
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+
+/* ── Auth ──────────────────────────────────────────────────────────────── */
+async function tryLogin() {
+  const u = document.getElementById('login-user').value;
+  const p = document.getElementById('login-pass').value;
+  document.getElementById('login-err').textContent = '';
+  try {
+    const r = await fetch('/api/login', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      credentials:'same-origin', body:JSON.stringify({username:u, password:p})
+    });
+    const j = await r.json();
+    if (r.ok) {
+      sessionStorage.setItem('user', j.user || u);
+      showApp();
+    }
+    else document.getElementById('login-err').textContent = j.error || '登录失败';
+  } catch(e) { document.getElementById('login-err').textContent = '网络错误'; }
+}
+function showLogin() {
+  document.getElementById('login-page').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+function showApp() {
+  document.getElementById('login-page').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('username-display').textContent = sessionStorage.getItem('user') || '';
+  showPage('feeds');
+}
+async function doLogout() {
+  await api('/api/logout','POST');
+  sessionStorage.clear();
+  showLogin();
+}
+
+/* ── Page navigation ──────────────────────────────────────────────────── */
+function showPage(p) {
+  curPage = p;
+  document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.toggle('active', a.dataset.page===p));
+  document.getElementById('page-feeds').style.display = p==='feeds' ? 'block' : 'none';
+  document.getElementById('page-items').style.display = p==='items' ? 'block' : 'none';
+  document.getElementById('page-settings').style.display = p==='settings' ? 'block' : 'none';
+  if (p==='feeds') { loadFeeds(); loadStats(); }
+  if (p==='items') { itemPage=1; loadItems(); }
+  if (p==='settings') { loadSettings(); }
+}
+
+/* ── Stats ────────────────────────────────────────────────────────────── */
+async function loadStats() {
+  const s = await api('/api/stats');
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-item"><div class="num">${s.feeds_total||0}</div><div class="label">订阅源</div></div>
+    <div class="stat-item"><div class="num">${s.items_total||0}</div><div class="label">总消息</div></div>
+    <div class="stat-item"><div class="num">${s.items_matched||0}</div><div class="label">命中</div></div>
+    <div class="stat-item"><div class="num">${s.items_notified||0}</div><div class="label">已推送</div></div>
+    <div class="stat-item"><div class="num">${s.feeds_err||0}</div><div class="label">错误源</div></div>`;
+}
+
+/* ── Feeds ────────────────────────────────────────────────────────────── */
+let allFeeds = [];
+async function loadFeeds() {
+  const j = await api('/api/feeds');
+  allFeeds = j.feeds || [];
+  renderFeeds();
+  const sel = document.getElementById('item-feed-filter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">所有订阅源</option>' + allFeeds.map(f =>
+    `<option value="${f.id}">${esc(f.name)}</option>`).join('');
+  sel.value = cur;
+}
+function renderFeeds() {
+  const tb = document.getElementById('feed-tbody');
+  if (!allFeeds.length) {
+    tb.innerHTML = '<tr><td colspan="5" class="empty">暂无订阅源，点击「+ 添加订阅」开始</td></tr>';
+    return;
+  }
+  tb.innerHTML = allFeeds.map(f => {
+    const wTags = (f.white_keywords||'').split('\n').filter(Boolean).map(w=>`<span style="background:#e8f5e9;color:#2e7d32;padding:1px 7px;border-radius:8px;font-size:11px;margin:1px">+${esc(w)}</span>`).join('');
+    const bTags = (f.black_keywords||'').split('\n').filter(Boolean).map(w=>`<span style="background:#ffebee;color:#c62828;padding:1px 7px;border-radius:8px;font-size:11px;margin:1px">-${esc(w)}</span>`).join('');
+    const kwHtml = wTags + bTags || '<span class="muted">不限制</span>';
+    const status = f.last_error
+      ? `<span class="dot dot-red" title="${esc(f.last_error)}"></span> <span class="muted">${esc(f.last_error.slice(0,25))}</span>`
+      : (f.enabled ? '<span class="dot dot-green"></span> <span class="muted">正常</span>' : '<span class="dot dot-red"></span> <span class="muted">已禁用</span>');
+    const lastTime = f.last_polled_at ? fmtTime(f.last_polled_at) : '<span class="muted">-</span>';
+    return `<tr>
+      <td><strong>${esc(f.name)}</strong><div class="text-ellipsis-sm">${esc(f.url)}</div></td>
+      <td>${kwHtml}</td>
+      <td style="white-space:nowrap">${status}</td>
+      <td class="muted" style="white-space:nowrap">${lastTime}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-ghost btn-sm" onclick="editFeed(${f.id})">编辑</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleFeed(${f.id})">${f.enabled?'禁用':'启用'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="pollOne(${f.id})">轮询</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteFeed(${f.id})">删除</button>
+      </td></tr>`;
+  }).join('');
+}
+
+/* ── Feed form (modal) ────────────────────────────────────────────────── */
+function openAddFeed() {
+  document.getElementById('feed-edit-id').value = '';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-url').value = '';
+  document.getElementById('f-white').value = '';
+  document.getElementById('f-black').value = '';
+  document.getElementById('f-notify').value = '';
+  document.getElementById('f-interval').value = 60;
+  document.getElementById('feed-form-title').textContent = '添加订阅源';
+  openModal('modal-feed');
+}
+function editFeed(id) {
+  const f = allFeeds.find(x=>x.id===id);
+  if (!f) return;
+  document.getElementById('feed-edit-id').value = f.id;
+  document.getElementById('f-name').value = f.name;
+  document.getElementById('f-url').value = f.url;
+  document.getElementById('f-white').value = f.white_keywords;
+  document.getElementById('f-black').value = f.black_keywords;
+  document.getElementById('f-notify').value = f.notify_urls;
+  document.getElementById('f-interval').value = f.poll_interval;
+  document.getElementById('feed-form-title').textContent = '编辑订阅源';
+  openModal('modal-feed');
+}
+async function saveFeed() {
+  const id = document.getElementById('feed-edit-id').value;
+  const data = {
+    name: document.getElementById('f-name').value,
+    url: document.getElementById('f-url').value,
+    white_keywords: document.getElementById('f-white').value,
+    black_keywords: document.getElementById('f-black').value,
+    notify_urls: document.getElementById('f-notify').value,
+    poll_interval: parseInt(document.getElementById('f-interval').value) || 60,
+  };
+  if (!data.url) { alert('URL 不能为空'); return; }
+  if (id) await api(`/api/feeds/${id}`,'PUT',data);
+  else await api('/api/feeds','POST',data);
+  closeModal('modal-feed');
+  loadFeeds(); loadStats();
+}
+async function toggleFeed(id) { await api(`/api/feeds/${id}/toggle`,'POST'); loadFeeds(); }
+async function deleteFeed(id) {
+  if (!confirm('确定删除该订阅源？相关消息记录也会一并删除。')) return;
+  await api(`/api/feeds/${id}`,'DELETE');
+  loadFeeds(); loadStats();
+}
+
+/* ── Poll ──────────────────────────────────────────────────────────────── */
+async function pollOne(id) { await api('/api/poll','POST',{feed_id:id}); loadFeeds(); loadStats(); }
+async function pollAll() {
+  try {
+    const r = await api('/api/poll','POST');
+    alert('轮询完成\n' + (r.log||[]).join('\n'));
+    loadFeeds(); loadStats();
+  } catch(e) { alert('轮询失败: ' + e.message); }
+}
+
+/* ── Items ────────────────────────────────────────────────────────────── */
+async function loadItems() {
+  const q = new URLSearchParams({
+    page: itemPage, limit: 40,
+    keyword: document.getElementById('item-kw').value,
+    filter: document.getElementById('item-filter').value,
+    feed_id: document.getElementById('item-feed-filter').value,
+  });
+  const j = await api('/api/items?'+q);
+  renderItems(j);
+}
+function renderItems(j) {
+  const tb = document.getElementById('item-tbody');
+  if (!j.items||!j.items.length) {
+    tb.innerHTML = '<tr><td colspan="7" class="empty">暂无消息记录</td></tr>';
+    document.getElementById('item-pagination').innerHTML = '';
+    return;
+  }
+  tb.innerHTML = j.items.map(it => {
+    const matchTags = renderMatchTags(it);
+    const pushDot = it.notified ? '<span class="dot dot-green" title="已推送"></span>' : '<span class="dot dot-red" title="未推送"></span>';
+    return `<tr>
+      <td class="muted" style="white-space:nowrap">${fmtTime(it.received_at)}</td>
+      <td style="white-space:nowrap"><span class="text-ellipsis-sm">${esc(it.feed_name)}</span></td>
+      <td><a href="${esc(it.link)}" target="_blank">${esc(it.title.slice(0,45))}</a></td>
+      <td class="text-ellipsis">${esc(it.body_text.slice(0,60))}</td>
+      <td>${matchTags}</td>
+      <td style="text-align:center;white-space:nowrap">${pushDot}</td>
+      <td style="white-space:nowrap"><button class="btn ${it.notified?'btn-ghost':'btn-primary'} btn-sm" onclick="manualPushItem(${it.id})">手动推送</button></td>
+    </tr>`;
+  }).join('');
+
+
+  let pgHtml = '';
+  if (j.pages > 1) {
+    for (let p=1; p<=j.pages; p++) {
+      pgHtml += `<button class="${p===j.page?'active':''}" onclick="itemPage=${p};loadItems()">${p}</button>`;
+    }
+  }
+  document.getElementById('item-pagination').innerHTML = pgHtml;
+}
+
+function renderMatchTags(it) {
+  const kws = Array.isArray(it.matched_keywords) ? it.matched_keywords : [];
+  if (kws.length) return `<div class="kw-tags">${kws.map(k=>`<span class="kw-tag" title="${esc(k)}">${esc(k)}</span>`).join('')}</div>`;
+  if (it.matched) return '<div class="kw-tags"><span class="kw-tag kw-tag-muted">全部推送</span></div>';
+  return '<span class="muted">未命中</span>';
+}
+
+async function manualPushItem(id) {
+  try {
+    await api(`/api/items/${id}/push`, 'POST');
+    loadItems();
+    loadStats();
+  } catch(e) {
+    alert('手动推送失败: ' + e.message);
+  }
+}
+
+/* ── Settings ─────────────────────────────────────────────────────────── */
+async function loadSettings() {
+  try {
+    const s = await api('/api/settings');
+    document.getElementById('msg-limit').value = s.message_limit || 0;
+    document.getElementById('profile-username').value = sessionStorage.getItem('user') || '';
+  } catch(e) {}
+}
+async function saveSettings() {
+  const limit = parseInt(document.getElementById('msg-limit').value) || 0;
+  try {
+    await api('/api/settings','PUT',{message_limit: limit});
+    document.getElementById('settings-msg').textContent = '✅ 已保存';
+  } catch(e) {
+    document.getElementById('settings-msg').textContent = '❌ ' + e.message;
+  }
+}
+async function manualCleanup() {
+  try {
+    const r = await api('/api/settings/cleanup','POST');
+    document.getElementById('settings-msg').textContent = `✅ 清理了 ${r.removed} 条旧消息`;
+  } catch(e) {
+    document.getElementById('settings-msg').textContent = '❌ ' + e.message;
+  }
+}
+async function saveProfile() {
+  const username = document.getElementById('profile-username').value.trim();
+  const currentPassword = document.getElementById('profile-current-password').value;
+  const newPassword = document.getElementById('profile-new-password').value;
+  const confirmPassword = document.getElementById('profile-confirm-password').value;
+  const msg = document.getElementById('profile-msg');
+  try {
+    const r = await api('/api/profile','PUT',{
+      username,
+      current_password: currentPassword,
+      new_password: newPassword,
+      confirm_password: confirmPassword,
+    });
+    sessionStorage.setItem('user', r.user || username);
+    document.getElementById('username-display').textContent = r.user || username;
+    document.getElementById('profile-current-password').value = '';
+    document.getElementById('profile-new-password').value = '';
+    document.getElementById('profile-confirm-password').value = '';
+    msg.textContent = '✅ 已保存';
+  } catch(e) {
+    msg.textContent = '❌ ' + e.message;
+  }
+}
+
+/* ── Import / Export ──────────────────────────────────────────────────── */
+async function exportFeeds() {
+  try {
+    const j = await api('/api/feeds/export');
+    const blob = new Blob([JSON.stringify(j, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `rss-notify-feeds-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    document.getElementById('import-msg').textContent = '✅ 导出成功';
+  } catch(e) {
+    document.getElementById('import-msg').textContent = '❌ ' + e.message;
+  }
+}
+function importFeeds(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      const feeds = data.feeds || [];
+      if (!feeds.length) { alert('配置文件中没有订阅源'); return; }
+      pendingImportData = data;
+      document.getElementById('import-preview-info').textContent = `即将导入 ${feeds.length} 个订阅源：`;
+      document.getElementById('import-preview-body').textContent = feeds.map(f => `• ${f.name || f.url}\n  ${f.url}`).join('\n\n');
+      document.getElementById('import-confirm-btn').onclick = doImport;
+      openModal('modal-import');
+    } catch(err) {
+      alert('JSON 解析失败: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+async function doImport() {
+  if (!pendingImportData) return;
+  try {
+    const r = await api('/api/feeds/import','POST',pendingImportData);
+    closeModal('modal-import');
+    document.getElementById('import-msg').textContent = `✅ 成功导入 ${r.created} 个订阅源`;
+    loadFeeds(); loadStats();
+    pendingImportData = null;
+  } catch(e) {
+    document.getElementById('import-msg').textContent = '❌ ' + e.message;
+  }
+}
+
+/* ── Helpers ──────────────────────────────────────────────────────────── */
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtTime(iso) { return iso ? new Date(iso+'Z').toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : ''; }
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+/* ── Init ─────────────────────────────────────────────────────────────── */
+document.getElementById('login-form').addEventListener('submit', e => { e.preventDefault(); tryLogin(); });
+fetch('/api/me',{credentials:'same-origin'}).then(r=>r.ok?r.json():null).then(j=>{ if(j){sessionStorage.setItem('user',j.user);showApp();}}).catch(()=>{});
+</script>
+</body>
+</html>
