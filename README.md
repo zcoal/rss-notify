@@ -15,11 +15,6 @@
 
 ## 快速部署
 
-有两种部署方式：
-
-- **源码构建部署**：服务器 clone 仓库后本地 `docker compose up -d --build`。
-- **镜像部署**：GitHub Actions 自动发布镜像到 GHCR，服务器只需要 `image: ghcr.io/...` 的 Compose 文件，不需要源码和构建步骤。
-
 ### 方式 A：源码构建部署
 
 #### 1. 克隆项目
@@ -83,21 +78,7 @@ curl http://127.0.0.1:${APP_PORT:-8000}/api/health
 {"ok": true}
 ```
 
-### 方式 B：GHCR 镜像部署
-
-仓库包含 `.github/workflows/docker-image.yml`。你把项目上传到 GitHub 后，每次 push 到 `main` / `master`，GitHub Actions 会自动构建并发布镜像：
-
-```text
-ghcr.io/<你的GitHub用户名或组织名>/rss-notify:latest
-```
-
-首次发布后，到 GitHub 仓库页面：
-
-1. 打开右侧或顶部的 **Packages**。
-2. 进入 `rss-notify` 镜像包。
-3. 如果需要公开拉取，把 Package visibility 改为 **Public**。
-
-然后其他服务器可以只保存一份 Compose 文件部署，不需要 clone 源码：
+### 方式 B：docker部署
 
 ```yaml
 services:
@@ -163,8 +144,6 @@ tgram://bot-token/chat-id
 gotify://host/token
 ```
 
-请不要把真实 token、chat id、通知 URL 提交到 Git 仓库。它们会保存在运行时 SQLite 数据库中，即 `./data/rss_notify.db`。
-
 ## 数据目录
 
 运行数据默认保存在：
@@ -199,29 +178,3 @@ docker compose up -d --build
 ```bash
 docker compose up -d --force-recreate
 ```
-
-## 本地开发
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-pip install -r requirements.txt pytest
-export DB_PATH=/tmp/rss_notify_dev.db
-export CONFIG_PATH=/tmp/rss_notify_config.json
-export ADMIN_USER=admin
-export ADMIN_PASS=admin
-export APP_SECRET_KEY=dev-secret
-python run.py
-```
-
-运行测试：
-
-```bash
-pytest -q
-```
-
-## 安全说明
-
-- `.env`、`data/`、SQLite 数据库和运行日志默认被 `.gitignore` 排除。
-- 公开仓库前请确认没有真实服务器 IP、域名、密码、token、通知 URL 或数据库文件。
-- 生产环境务必修改默认密码和 `APP_SECRET_KEY`。
